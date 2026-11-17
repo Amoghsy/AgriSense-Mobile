@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, UserRole } from '../types';
-import { demoFarmer, demoBuyer } from '../constants/mockData';
+import { demoFarmer, demoBuyer, fetchDemoUsers } from '../constants/mockData';
 
 interface AuthContextType {
   user: User | null;
@@ -47,13 +47,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(parsed);
         setIsLoggedIn(true);
       } else {
-        // Default to demo farmer for quick student/reviewer testing
-        setUser(demoFarmer);
+        // Fetch demo farmer from mock data JSON
+        const { demoFarmer: fetchedFarmer } = await fetchDemoUsers();
+        setUser(fetchedFarmer);
         setIsLoggedIn(true);
       }
     } catch (e) {
       console.warn('Error loading auth from storage', e);
-      setUser(demoFarmer);
+      const { demoFarmer: fetchedFarmer } = await fetchDemoUsers();
+      setUser(fetchedFarmer);
       setIsLoggedIn(true);
     } finally {
       setIsLoading(false);

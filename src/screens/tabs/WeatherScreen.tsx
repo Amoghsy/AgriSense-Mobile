@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,13 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../constants/colors';
-import { demoWeatherData } from '../../constants/mockData';
+import {
+  demoWeatherData,
+  regionalZones as defaultZones,
+  fetchWeatherData,
+  fetchRegionalZones,
+} from '../../constants/mockData';
+import { WeatherData } from '../../types';
 import { Header } from '../../components/common/Header';
 import {
   CloudSun,
@@ -24,24 +30,31 @@ import {
   Lightbulb,
 } from 'lucide-react-native';
 
-const regionalZones = [
-  'Nashik Valley, MH',
-  'Pune Agro Zone, MH',
-  'Nagpur Citrus Belt, MH',
-  'Karnal Rice Plains, HR',
-  'Bengaluru Rural, KA',
-];
-
 export const WeatherScreen: React.FC = () => {
-  const [selectedZone, setSelectedZone] = useState(regionalZones[0]);
+  const [weatherData, setWeatherData] = useState<WeatherData>(demoWeatherData);
+  const [zones, setZones] = useState<string[]>(defaultZones);
+  const [selectedZone, setSelectedZone] = useState(defaultZones[0]);
   const [refreshing, setRefreshing] = useState(false);
   const [isGpsActive, setIsGpsActive] = useState(true);
 
-  const onRefresh = () => {
+  useEffect(() => {
+    fetchWeatherData().then(setWeatherData);
+    fetchRegionalZones().then((res) => {
+      setZones(res);
+      if (res.length > 0 && !res.includes(selectedZone)) {
+        setSelectedZone(res[0]);
+      }
+    });
+  }, []);
+
+  const onRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => {
+    try {
+      const data = await fetchWeatherData();
+      setWeatherData(data);
+    } finally {
       setRefreshing(false);
-    }, 800);
+    }
   };
 
   const getConditionIcon = (cond: string) => {
@@ -76,7 +89,7 @@ export const WeatherScreen: React.FC = () => {
         {/* Location selector pills */}
         <View style={styles.locationSelector}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {regionalZones.map((zone) => {
+            {zones.map((zone) => {
               const active = zone === selectedZone;
               return (
                 <TouchableOpacity
@@ -106,7 +119,7 @@ export const WeatherScreen: React.FC = () => {
                 <Text style={styles.demoPillText}>SIMULATED DEMO WEATHER</Text>
               </View>
               <Text style={styles.zoneName}>{selectedZone}</Text>
-              <Text style={styles.updatedText}>Updated {demoWeatherData.lastUpdated}</Text>
+              <Text style={styles.updatedText}>Updated {weatherData.lastUpdated}</Text>
             </View>
             <View style={styles.weatherIconLarge}>
               <CloudSun size={48} color="#FEF08A" />
@@ -114,9 +127,9 @@ export const WeatherScreen: React.FC = () => {
           </View>
 
           <View style={styles.tempRow}>
-            <Text style={styles.bigTemp}>{demoWeatherData.temperature}°C</Text>
+            <Text style={styles.bigTemp}>{weatherData.temperature}°C</Text>
             <View style={styles.conditionCol}>
-              <Text style={styles.heroCondition}>{demoWeatherData.condition}</Text>
+              <Text style={styles.heroCondition}>{weatherData.condition}</Text>
               <Text style={styles.feelsLikeText}>Feels like 29°C • Pleasant</Text>
             </View>
           </View>
@@ -125,25 +138,25 @@ export const WeatherScreen: React.FC = () => {
           <View style={styles.metricsGrid}>
             <View style={styles.metricCard}>
               <Droplets size={18} color="#A7F3D0" />
-              <Text style={styles.metricVal}>{demoWeatherData.humidity}%</Text>
+              <Text style={styles.metricVal}>{weatherData.humidity}%</Text>
               <Text style={styles.metricSub}>Humidity</Text>
             </View>
 
             <View style={styles.metricCard}>
               <Wind size={18} color="#A7F3D0" />
-              <Text style={styles.metricVal}>{demoWeatherData.windSpeed} km/h</Text>
+              <Text style={styles.metricVal}>{weatherData.windSpeed} km/h</Text>
               <Text style={styles.metricSub}>Wind Speed</Text>
             </View>
 
             <View style={styles.metricCard}>
               <CloudRain size={18} color="#A7F3D0" />
-              <Text style={styles.metricVal}>{demoWeatherData.rainfallMm} mm</Text>
+              <Text style={styles.metricVal}>{weatherData.rainfallMm} mm</Text>
               <Text style={styles.metricSub}>Precipitation</Text>
             </View>
 
             <View style={styles.metricCard}>
               <Sun size={18} color="#A7F3D0" />
-              <Text style={styles.metricVal}>{demoWeatherData.uvIndex}/10</Text>
+              <Text style={styles.metricVal}>{weatherData.uvIndex}/10</Text>
               <Text style={styles.metricSub}>UV Rating</Text>
             </View>
           </View>
@@ -156,7 +169,7 @@ export const WeatherScreen: React.FC = () => {
             <Text style={styles.advisoryTitle}>Smart Spray & Irrigation Advisory</Text>
           </View>
           <Text style={styles.advisoryBody}>
-            {demoWeatherData.farmingAdvice}
+            {weatherData.farmingAdvice}
           </Text>
           <View style={styles.advisoryCheckRow}>
             <CheckCircle size={14} color="#16A34A" />
@@ -170,7 +183,7 @@ export const WeatherScreen: React.FC = () => {
         <View style={styles.forecastContainer}>
           <Text style={styles.sectionHeading}>7-Day Agro Forecast</Text>
 
-          {demoWeatherData.forecast.map((item, index) => (
+          {weatherData.forecast.map((item, index) => (
             <View key={index} style={styles.forecastRow}>
               <Text style={styles.forecastDay}>{item.day}</Text>
               <View style={styles.forecastConditionRow}>

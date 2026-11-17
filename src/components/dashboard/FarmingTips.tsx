@@ -1,31 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { colors } from '../../constants/colors';
+import { farmingTips as defaultTips, fetchFarmingTips, FarmingTip } from '../../constants/mockData';
 import { Lightbulb, ChevronRight } from 'lucide-react-native';
 
-const tips = [
-  {
-    id: 'tip_1',
-    category: 'Water Conservation',
-    title: 'Drip Irrigation Timing',
-    text: 'Irrigate during early morning (5:30 AM – 7:30 AM) to minimize evaporation losses and protect foliar health from scorch.',
-  },
-  {
-    id: 'tip_2',
-    category: 'Natural Pest Control',
-    title: 'Neem Kernel Spray',
-    text: 'A 5% NSKE (Neem Seed Kernel Extract) solution acts as an effective oviposition deterrent against whiteflies and aphids.',
-  },
-  {
-    id: 'tip_3',
-    category: 'Soil Vitality',
-    title: 'Mulching with Crop Residue',
-    text: 'Applying a 4-inch layer of straw or dried leaves lowers root-zone soil temperature by 3°C and suppresses weed germination.',
-  },
-];
-
 export const FarmingTips: React.FC = () => {
+  const [tips, setTips] = useState<FarmingTip[]>(defaultTips);
   const [activeIdx, setActiveIdx] = useState(0);
+
+  useEffect(() => {
+    fetchFarmingTips().then(setTips);
+  }, []);
 
   return (
     <View style={styles.container}>

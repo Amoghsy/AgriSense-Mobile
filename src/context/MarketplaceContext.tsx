@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product, Order, OrderStatus, CartItem } from '../types';
-import { initialProducts, initialOrders } from '../constants/mockData';
+import { initialProducts, initialOrders, fetchProducts, fetchOrders } from '../constants/mockData';
 
 interface MarketplaceContextType {
   products: Product[];
@@ -32,10 +32,16 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const storedProds = await AsyncStorage.getItem(PRODUCTS_KEY);
       if (storedProds) {
         setProducts(JSON.parse(storedProds));
+      } else {
+        const fetchedProds = await fetchProducts();
+        setProducts(fetchedProds);
       }
       const storedOrders = await AsyncStorage.getItem(ORDERS_KEY);
       if (storedOrders) {
         setOrders(JSON.parse(storedOrders));
+      } else {
+        const fetchedOrders = await fetchOrders();
+        setOrders(fetchedOrders);
       }
     } catch (e) {
       console.warn('Failed to load marketplace storage', e);

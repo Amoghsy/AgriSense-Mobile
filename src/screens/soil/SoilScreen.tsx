@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,8 @@ import {
   RefreshControl,
 } from 'react-native';
 import { colors } from '../../constants/colors';
-import { demoSoilData } from '../../constants/mockData';
+import { demoSoilData, fetchSoilTelemetry } from '../../constants/mockData';
+import { SoilTelemetry } from '../../types';
 import { Header } from '../../components/common/Header';
 import { MoistureGauge } from '../../components/soil/MoistureGauge';
 import {
@@ -27,20 +28,30 @@ interface SoilScreenProps {
 }
 
 export const SoilScreen: React.FC<SoilScreenProps> = ({ navigation }) => {
+  const [soilData, setSoilData] = useState<SoilTelemetry>(demoSoilData);
   const [isSimulated, setIsSimulated] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [moistureOffset, setMoistureOffset] = useState(0);
 
-  const onRefresh = () => {
+  useEffect(() => {
+    fetchSoilTelemetry().then((data) => {
+      setSoilData(data);
+    });
+  }, []);
+
+  const onRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => {
+    try {
+      const data = await fetchSoilTelemetry();
+      setSoilData(data);
       // micro fluctuation to show dynamic response
       setMoistureOffset((prev) => (prev === 0 ? 1.2 : 0));
+    } finally {
       setRefreshing(false);
-    }, 700);
+    }
   };
 
-  const currentMoisture = Number((demoSoilData.moisturePercentage + moistureOffset).toFixed(1));
+  const currentMoisture = Number((soilData.moisturePercentage + moistureOffset).toFixed(1));
 
   return (
     <View style={styles.container}>
@@ -68,7 +79,7 @@ export const SoilScreen: React.FC<SoilScreenProps> = ({ navigation }) => {
           <View style={styles.hwInfo}>
             <Cpu size={18} color={colors.primary} />
             <View>
-              <Text style={styles.hwTitle}>{demoSoilData.deviceId}</Text>
+              <Text style={styles.hwTitle}>{soilData.deviceId}</Text>
               <Text style={styles.hwStatus}>
                 Status: {isSimulated ? 'Simulated Telemetry' : 'ESP32 Physical Connected'}
               </Text>
@@ -102,7 +113,7 @@ export const SoilScreen: React.FC<SoilScreenProps> = ({ navigation }) => {
           <View style={styles.timestampRow}>
             <Clock size={12} color={colors.textMuted} />
             <Text style={styles.timestampText}>
-              Last transmission: {demoSoilData.lastUpdated}
+              Last transmission: {soilData.lastUpdated}
             </Text>
           </View>
         </View>
@@ -113,7 +124,7 @@ export const SoilScreen: React.FC<SoilScreenProps> = ({ navigation }) => {
             <View style={styles.statIconBadge}>
               <Thermometer size={18} color="#EA580C" />
             </View>
-            <Text style={styles.statValue}>{demoSoilData.temperatureCelsius}°C</Text>
+            <Text style={styles.statValue}>{soilData.temperatureCelsius}°C</Text>
             <Text style={styles.statLabel}>Soil Temperature</Text>
             <Text style={styles.statSub}>Optimum: 20° - 28°C</Text>
           </View>
@@ -122,7 +133,7 @@ export const SoilScreen: React.FC<SoilScreenProps> = ({ navigation }) => {
             <View style={[styles.statIconBadge, { backgroundColor: '#E0F2FE' }]}>
               <Activity size={18} color="#0284C7" />
             </View>
-            <Text style={styles.statValue}>{demoSoilData.ph} pH</Text>
+            <Text style={styles.statValue}>{soilData.ph} pH</Text>
             <Text style={styles.statLabel}>Soil Acidity / pH</Text>
             <Text style={styles.statSub}>Slightly Acidic (Good)</Text>
           </View>
@@ -134,7 +145,7 @@ export const SoilScreen: React.FC<SoilScreenProps> = ({ navigation }) => {
           <View style={styles.npkRow}>
             <View style={styles.npkCol}>
               <Text style={styles.npkLabel}>Nitrogen (N)</Text>
-              <Text style={styles.npkValue}>{demoSoilData.npk.nitrogen} mg/kg</Text>
+              <Text style={styles.npkValue}>{soilData.npk.nitrogen} mg/kg</Text>
               <View style={[styles.npkPill, { backgroundColor: '#DCFCE7' }]}>
                 <Text style={[styles.npkPillText, { color: '#15803D' }]}>Adequate</Text>
               </View>
@@ -144,7 +155,7 @@ export const SoilScreen: React.FC<SoilScreenProps> = ({ navigation }) => {
 
             <View style={styles.npkCol}>
               <Text style={styles.npkLabel}>Phosphorus (P)</Text>
-              <Text style={styles.npkValue}>{demoSoilData.npk.phosphorus} mg/kg</Text>
+              <Text style={styles.npkValue}>{soilData.npk.phosphorus} mg/kg</Text>
               <View style={[styles.npkPill, { backgroundColor: '#DCFCE7' }]}>
                 <Text style={[styles.npkPillText, { color: '#15803D' }]}>Good</Text>
               </View>
@@ -154,7 +165,7 @@ export const SoilScreen: React.FC<SoilScreenProps> = ({ navigation }) => {
 
             <View style={styles.npkCol}>
               <Text style={styles.npkLabel}>Potassium (K)</Text>
-              <Text style={styles.npkValue}>{demoSoilData.npk.potassium} mg/kg</Text>
+              <Text style={styles.npkValue}>{soilData.npk.potassium} mg/kg</Text>
               <View style={[styles.npkPill, { backgroundColor: '#DCFCE7' }]}>
                 <Text style={[styles.npkPillText, { color: '#15803D' }]}>High</Text>
               </View>
@@ -170,7 +181,7 @@ export const SoilScreen: React.FC<SoilScreenProps> = ({ navigation }) => {
           </View>
 
           <View style={styles.chartBarsContainer}>
-            {demoSoilData.history.map((h, i) => (
+            {soilData.history.map((h, i) => (
               <View key={i} style={styles.barCol}>
                 <View style={styles.barsPair}>
                   {/* Moisture bar */}

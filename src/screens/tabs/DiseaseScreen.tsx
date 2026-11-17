@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,11 @@ import { colors } from '../../constants/colors';
 import { useDetection } from '../../context/DetectionContext';
 import { Header } from '../../components/common/Header';
 import { DiseaseResultModal } from '../disease/DiseaseResultModal';
-import { sampleDiseaseResults } from '../../constants/mockData';
+import {
+  sampleLeaves as defaultSampleLeaves,
+  fetchSampleLeaves,
+  SampleLeaf,
+} from '../../constants/mockData';
 import {
   Camera,
   Image as ImageIcon,
@@ -25,36 +29,20 @@ import {
   HelpCircle,
 } from 'lucide-react-native';
 
-const sampleLeaves = [
-  {
-    title: 'Tomato Early Blight',
-    crop: 'Tomato',
-    uri: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600',
-    type: 'earlyBlight',
-  },
-  {
-    title: 'Capsicum Powdery Mildew',
-    crop: 'Bell Pepper',
-    uri: 'https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?w=600',
-    type: 'powderyMildew',
-  },
-  {
-    title: 'Healthy Green Foliage',
-    crop: 'Greenhouse Crop',
-    uri: 'https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?w=600',
-    type: 'healthy',
-  },
-];
-
 interface DiseaseScreenProps {
   navigation: any;
 }
 
 export const DiseaseScreen: React.FC<DiseaseScreenProps> = ({ navigation }) => {
   const { analyzeImage, isAnalyzing, latestResult, history } = useDetection();
-  const [selectedImage, setSelectedImage] = useState<string | null>(sampleLeaves[0].uri);
+  const [leaves, setLeaves] = useState<SampleLeaf[]>(defaultSampleLeaves);
+  const [selectedImage, setSelectedImage] = useState<string | null>(defaultSampleLeaves[0]?.uri || null);
   const [modalVisible, setModalVisible] = useState(false);
   const [analyzingStep, setAnalyzingStep] = useState('Extracting leaf texture features...');
+
+  useEffect(() => {
+    fetchSampleLeaves().then(setLeaves);
+  }, []);
 
   const pickFromGallery = async () => {
     try {
@@ -91,7 +79,7 @@ export const DiseaseScreen: React.FC<DiseaseScreenProps> = ({ navigation }) => {
           'Camera Permission',
           'Camera access is needed to take a leaf photo. Using high-resolution sample leaf instead.'
         );
-        setSelectedImage(sampleLeaves[0].uri);
+        setSelectedImage(leaves[0]?.uri || defaultSampleLeaves[0].uri);
         return;
       }
 
@@ -107,7 +95,7 @@ export const DiseaseScreen: React.FC<DiseaseScreenProps> = ({ navigation }) => {
     } catch (e) {
       console.warn('Camera error', e);
       Alert.alert('Notice', 'Camera simulation fallback: selected sample leaf.');
-      setSelectedImage(sampleLeaves[0].uri);
+      setSelectedImage(leaves[0]?.uri || defaultSampleLeaves[0].uri);
     }
   };
 
@@ -236,7 +224,7 @@ export const DiseaseScreen: React.FC<DiseaseScreenProps> = ({ navigation }) => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.sampleScroll}
           >
-            {sampleLeaves.map((leaf, idx) => (
+            {leaves.map((leaf, idx) => (
               <TouchableOpacity
                 key={idx}
                 style={[
@@ -276,7 +264,7 @@ export const DiseaseScreen: React.FC<DiseaseScreenProps> = ({ navigation }) => {
         result={latestResult}
         onClose={() => setModalVisible(false)}
         onScanAnother={() => {
-          setSelectedImage(sampleLeaves[1].uri);
+          setSelectedImage(leaves[1]?.uri || defaultSampleLeaves[1]?.uri || null);
         }}
       />
     </View>

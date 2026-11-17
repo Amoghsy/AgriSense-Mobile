@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { demoWeatherData } from '../../constants/mockData';
+import { demoWeatherData, fetchWeatherData } from '../../constants/mockData';
+import { WeatherData } from '../../types';
 import { CloudSun, Droplets, Wind, ChevronRight } from 'lucide-react-native';
 
 interface WeatherCardProps {
@@ -9,6 +10,12 @@ interface WeatherCardProps {
 }
 
 export const WeatherCard: React.FC<WeatherCardProps> = ({ onPress }) => {
+  const [weatherData, setWeatherData] = useState<WeatherData>(demoWeatherData);
+
+  useEffect(() => {
+    fetchWeatherData().then(setWeatherData);
+  }, []);
+
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
       <LinearGradient
@@ -20,12 +27,12 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({ onPress }) => {
         <View style={styles.topRow}>
           <View>
             <View style={styles.tagRow}>
-              <Text style={styles.locationText}>{demoWeatherData.location}</Text>
+              <Text style={styles.locationText}>{weatherData.location}</Text>
               <View style={styles.demoBadge}>
                 <Text style={styles.demoBadgeText}>DEMO</Text>
               </View>
             </View>
-            <Text style={styles.conditionText}>{demoWeatherData.condition}</Text>
+            <Text style={styles.conditionText}>{weatherData.condition}</Text>
           </View>
           <View style={styles.iconCircle}>
             <CloudSun size={32} color="#FEF08A" />
@@ -33,31 +40,31 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({ onPress }) => {
         </View>
 
         <View style={styles.middleRow}>
-          <Text style={styles.tempText}>{demoWeatherData.temperature}°C</Text>
+          <Text style={styles.tempText}>{weatherData.temperature}°C</Text>
           <View style={styles.metricsContainer}>
             <View style={styles.metricItem}>
               <Droplets size={14} color="#A7F3D0" />
               <Text style={styles.metricLabel}>Humidity</Text>
-              <Text style={styles.metricValue}>{demoWeatherData.humidity}%</Text>
+              <Text style={styles.metricValue}>{weatherData.humidity}%</Text>
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metricItem}>
               <Wind size={14} color="#A7F3D0" />
               <Text style={styles.metricLabel}>Wind</Text>
-              <Text style={styles.metricValue}>{demoWeatherData.windSpeed} km/h</Text>
+              <Text style={styles.metricValue}>{weatherData.windSpeed} km/h</Text>
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metricItem}>
               <CloudSun size={14} color="#A7F3D0" />
               <Text style={styles.metricLabel}>UV Index</Text>
-              <Text style={styles.metricValue}>{demoWeatherData.uvIndex}/10</Text>
+              <Text style={styles.metricValue}>{weatherData.uvIndex}/10</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.footerRow}>
           <Text style={styles.footerAdvice} numberOfLines={1}>
-            💡 {demoWeatherData.farmingAdvice}
+            💡 {weatherData.farmingAdvice}
           </Text>
           <View style={styles.viewMoreRow}>
             <Text style={styles.viewMoreText}>7-Day</Text>

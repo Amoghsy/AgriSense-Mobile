@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors } from '../../constants/colors';
-import { demoSoilData } from '../../constants/mockData';
+import { demoSoilData, fetchSoilTelemetry } from '../../constants/mockData';
+import { SoilTelemetry } from '../../types';
 import { Sprout, Activity, ChevronRight, Gauge } from 'lucide-react-native';
 
 interface SoilCardProps {
@@ -9,7 +10,13 @@ interface SoilCardProps {
 }
 
 export const SoilCard: React.FC<SoilCardProps> = ({ onPress }) => {
-  const moisture = demoSoilData.moisturePercentage;
+  const [soilData, setSoilData] = useState<SoilTelemetry>(demoSoilData);
+
+  useEffect(() => {
+    fetchSoilTelemetry().then(setSoilData);
+  }, []);
+
+  const moisture = soilData.moisturePercentage;
   const isOptimal = moisture >= 55 && moisture <= 75;
 
   return (
@@ -28,7 +35,7 @@ export const SoilCard: React.FC<SoilCardProps> = ({ onPress }) => {
             <View style={styles.sensorStatusRow}>
               <View style={styles.liveDot} />
               <Text style={styles.sensorStatusText}>
-                {demoSoilData.deviceId} (Demo IoT)
+                {soilData.deviceId} (Demo IoT)
               </Text>
             </View>
           </View>
@@ -78,10 +85,10 @@ export const SoilCard: React.FC<SoilCardProps> = ({ onPress }) => {
         {/* Temperature Block */}
         <View style={styles.statBoxAlt}>
           <Text style={styles.statLabel}>Soil Temp</Text>
-          <Text style={styles.statValue}>{demoSoilData.temperatureCelsius}°C</Text>
+          <Text style={styles.statValue}>{soilData.temperatureCelsius}°C</Text>
           <View style={styles.phRow}>
             <Activity size={12} color={colors.textSecondary} />
-            <Text style={styles.phText}>pH {demoSoilData.ph} (Neutral)</Text>
+            <Text style={styles.phText}>pH {soilData.ph} (Neutral)</Text>
           </View>
         </View>
       </View>

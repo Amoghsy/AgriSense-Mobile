@@ -1,7 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DiseaseDetection } from '../types';
-import { initialDetectionHistory, sampleDiseaseResults } from '../constants/mockData';
+import {
+  initialDetectionHistory,
+  sampleDiseaseResults,
+  fetchDiseaseHistory,
+  fetchSampleDiseaseResults,
+} from '../constants/mockData';
 
 interface DetectionContextType {
   history: DiseaseDetection[];
@@ -29,6 +34,9 @@ export const DetectionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const data = await AsyncStorage.getItem(HISTORY_KEY);
       if (data) {
         setHistory(JSON.parse(data));
+      } else {
+        const initial = await fetchDiseaseHistory();
+        setHistory(initial);
       }
     } catch (e) {
       console.warn('Failed to load detection history', e);
