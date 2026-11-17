@@ -19,6 +19,9 @@ import {
   Leaf,
   FlaskConical,
   RotateCcw,
+  Sparkles,
+  Clock,
+  HelpCircle,
 } from 'lucide-react-native';
 
 interface DiseaseResultModalProps {
@@ -50,8 +53,10 @@ export const DiseaseResultModal: React.FC<DiseaseResultModalProps> = ({
         <View style={styles.topBar}>
           <View style={styles.titleGroup}>
             <Text style={styles.topTitle}>Diagnosis Results</Text>
-            <View style={styles.demoTag}>
-              <Text style={styles.demoTagText}>DEMO AI DIAGNOSIS</Text>
+            <View style={[styles.demoTag, { backgroundColor: '#DCFCE7' }]}>
+              <Text style={[styles.demoTagText, { color: '#15803D' }]}>
+                LIVE AI (MobileNetV2)
+              </Text>
             </View>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
@@ -66,8 +71,28 @@ export const DiseaseResultModal: React.FC<DiseaseResultModalProps> = ({
             <View style={styles.confidenceOverlay}>
               <Text style={styles.confidenceLabel}>Confidence</Text>
               <Text style={styles.confidenceValue}>{result.confidence}%</Text>
+              {result.inferenceTimeMs !== undefined && (
+                <View style={styles.latencyRow}>
+                  <Clock size={10} color="#A7F3D0" />
+                  <Text style={styles.latencyText}>{result.inferenceTimeMs}ms</Text>
+                </View>
+              )}
             </View>
           </View>
+
+          {/* Uncertainty Notice Alert (if confidence < 50%) */}
+          {result.isUncertain && (
+            <View style={styles.uncertaintyBox}>
+              <AlertTriangle size={18} color="#D97706" />
+              <View style={styles.uncertaintyTextCol}>
+                <Text style={styles.uncertaintyTitle}>Uncertain Classification (&lt;50% Confidence)</Text>
+                <Text style={styles.uncertaintyText}>
+                  {result.uncertaintyWarning ||
+                    'The image may be blurry, poorly lit, or contains an unrecognized plant leaf. Verification with an agronomist is recommended.'}
+                </Text>
+              </View>
+            </View>
+          )}
 
           {/* Disease title & severity badge */}
           <View style={styles.headerBlock}>
@@ -107,89 +132,123 @@ export const DiseaseResultModal: React.FC<DiseaseResultModalProps> = ({
             <Text style={styles.description}>{result.description}</Text>
           </View>
 
+          {/* Alternative Predictions List (from MobileNetV2 top-3) */}
+          {result.alternatives && result.alternatives.length > 1 && (
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionTitleRow}>
+                <Sparkles size={18} color={colors.primary} />
+                <Text style={styles.sectionTitle}>Model Prediction Probabilities</Text>
+              </View>
+              {result.alternatives.map((alt, i) => (
+                <View key={i} style={styles.altRow}>
+                  <View style={styles.altTopLine}>
+                    <Text style={styles.altDisease}>{alt.disease}</Text>
+                    <Text style={styles.altConfidence}>{alt.confidence}%</Text>
+                  </View>
+                  <Text style={styles.altCrop}>{alt.crop}</Text>
+                  <View style={styles.progressBarTrack}>
+                    <View
+                      style={[
+                        styles.progressBarFill,
+                        {
+                          width: `${Math.min(alt.confidence, 100)}%`,
+                          backgroundColor: i === 0 ? colors.primary : '#94A3B8',
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
           {/* Expert Disclaimer Alert */}
           <View style={styles.disclaimerBox}>
-            <AlertTriangle size={18} color="#B45309" />
+            <AlertTriangle size={16} color="#B45309" />
             <Text style={styles.disclaimerText}>
-              Disclaimer: This AI prediction is simulated for educational and demo purposes. Always consult local agricultural extension officers or certified agronomists before applying chemical pesticides.
+              Disclaimer: AI predictions are assistive diagnostic references. Always verify chemical controls with a local agricultural extension officer.
             </Text>
           </View>
 
           {/* Symptoms Section */}
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionTitleRow}>
-              <ShieldAlert size={18} color="#EF4444" />
-              <Text style={styles.sectionTitle}>Identified Symptoms</Text>
-            </View>
-            {result.symptoms.map((symp, i) => (
-              <View key={i} style={styles.bulletRow}>
-                <View style={styles.redDot} />
-                <Text style={styles.bulletText}>{symp}</Text>
+          {result.symptoms && result.symptoms.length > 0 && (
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionTitleRow}>
+                <ShieldAlert size={18} color="#EF4444" />
+                <Text style={styles.sectionTitle}>Identified Symptoms</Text>
               </View>
-            ))}
-          </View>
+              {result.symptoms.map((symp, i) => (
+                <View key={i} style={styles.bulletRow}>
+                  <View style={styles.redDot} />
+                  <Text style={styles.bulletText}>{symp}</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           {/* Treatment Section */}
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionTitleRow}>
-              <Leaf size={18} color="#16A34A" />
-              <Text style={styles.sectionTitle}>Organic & Biological Control</Text>
-            </View>
-            {result.treatment.organic.map((treat, i) => (
-              <View key={i} style={styles.bulletRow}>
-                <CheckCircle2 size={16} color="#16A34A" />
-                <Text style={styles.bulletText}>{treat}</Text>
-              </View>
-            ))}
+          {result.treatment && (
+            <View style={styles.sectionCard}>
+              {result.treatment.organic && result.treatment.organic.length > 0 && (
+                <>
+                  <View style={styles.sectionTitleRow}>
+                    <Leaf size={18} color="#16A34A" />
+                    <Text style={styles.sectionTitle}>Organic & Biological Control</Text>
+                  </View>
+                  {result.treatment.organic.map((treat, i) => (
+                    <View key={i} style={styles.bulletRow}>
+                      <CheckCircle2 size={16} color="#16A34A" />
+                      <Text style={styles.bulletText}>{treat}</Text>
+                    </View>
+                  ))}
+                </>
+              )}
 
-            <View style={[styles.sectionTitleRow, { marginTop: 14 }]}>
-              <FlaskConical size={18} color="#0284C7" />
-              <Text style={styles.sectionTitle}>Chemical Treatment Options</Text>
+              {result.treatment.chemical && result.treatment.chemical.length > 0 && (
+                <>
+                  <View style={[styles.sectionTitleRow, { marginTop: 14 }]}>
+                    <FlaskConical size={18} color="#0284C7" />
+                    <Text style={styles.sectionTitle}>Chemical Treatment Options</Text>
+                  </View>
+                  {result.treatment.chemical.map((chem, i) => (
+                    <View key={i} style={styles.bulletRow}>
+                      <CheckCircle2 size={16} color="#0284C7" />
+                      <Text style={styles.bulletText}>{chem}</Text>
+                    </View>
+                  ))}
+                </>
+              )}
             </View>
-            {result.treatment.chemical.map((chem, i) => (
-              <View key={i} style={styles.bulletRow}>
-                <CheckCircle2 size={16} color="#0284C7" />
-                <Text style={styles.bulletText}>{chem}</Text>
-              </View>
-            ))}
-          </View>
+          )}
 
           {/* Prevention Guidelines */}
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionTitleRow}>
-              <CheckCircle2 size={18} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Prevention & Agronomic Care</Text>
-            </View>
-            {result.prevention.map((prev, i) => (
-              <View key={i} style={styles.bulletRow}>
-                <View style={styles.greenDot} />
-                <Text style={styles.bulletText}>{prev}</Text>
+          {result.prevention && result.prevention.length > 0 && (
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionTitleRow}>
+                <CheckCircle2 size={18} color={colors.primary} />
+                <Text style={styles.sectionTitle}>Agronomic Prevention</Text>
               </View>
-            ))}
-          </View>
+              {result.prevention.map((prev, i) => (
+                <View key={i} style={styles.bulletRow}>
+                  <View style={styles.greenDot} />
+                  <Text style={styles.bulletText}>{prev}</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
-          {/* Action buttons */}
-          <View style={styles.actionsContainer}>
-            <TouchableOpacity
-              style={styles.scanAnotherBtn}
-              onPress={() => {
-                onClose();
-                onScanAnother();
-              }}
-              activeOpacity={0.8}
-            >
-              <RotateCcw size={16} color="#FFFFFF" />
-              <Text style={styles.scanAnotherText}>Scan Another Plant</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.doneBtn}
-              onPress={onClose}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.doneText}>Close Results</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Bottom Action Button */}
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => {
+              onClose();
+              onScanAnother();
+            }}
+            activeOpacity={0.8}
+          >
+            <RotateCcw size={18} color="#FFFFFF" />
+            <Text style={styles.actionBtnText}>Scan Another Leaf</Text>
+          </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
     </Modal>
@@ -247,7 +306,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     position: 'relative',
-    marginBottom: 16,
+    marginBottom: 14,
     backgroundColor: '#E2E8F0',
   },
   image: {
@@ -259,7 +318,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 12,
     right: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: 'rgba(0, 0, 0, 0.78)',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -274,6 +333,42 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: '#FFFFFF',
+  },
+  latencyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 2,
+  },
+  latencyText: {
+    fontSize: 9,
+    color: '#A7F3D0',
+    fontWeight: '600',
+  },
+  uncertaintyBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+  },
+  uncertaintyTextCol: {
+    flex: 1,
+  },
+  uncertaintyTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#92400E',
+    marginBottom: 2,
+  },
+  uncertaintyText: {
+    fontSize: 11,
+    color: '#B45309',
+    lineHeight: 16,
   },
   headerBlock: {
     backgroundColor: '#FFFFFF',
@@ -304,38 +399,37 @@ const styles = StyleSheet.create({
   },
   diseaseTitle: {
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '800',
     color: colors.textPrimary,
-    letterSpacing: -0.3,
+    marginBottom: 4,
   },
   cropSub: {
     fontSize: 13,
+    fontWeight: '600',
     color: colors.primary,
-    fontWeight: '700',
-    marginTop: 2,
+    marginBottom: 10,
   },
   description: {
     fontSize: 13,
     color: colors.textSecondary,
     lineHeight: 19,
-    marginTop: 8,
   },
   disclaimerBox: {
     flexDirection: 'row',
-    backgroundColor: '#FEF3C7',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    borderRadius: 12,
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#FFFBEB',
     padding: 12,
-    gap: 10,
+    borderRadius: 12,
     marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
   },
   disclaimerText: {
+    flex: 1,
     fontSize: 11,
     color: '#92400E',
     lineHeight: 16,
-    flex: 1,
-    fontWeight: '500',
   },
   sectionCard: {
     backgroundColor: '#FFFFFF',
@@ -349,18 +443,57 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
     color: colors.textPrimary,
+  },
+  altRow: {
+    marginBottom: 10,
+  },
+  altTopLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  altDisease: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  altConfidence: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  altCrop: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginBottom: 4,
+  },
+  progressBarTrack: {
+    height: 6,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 4,
   },
   bulletRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
     marginBottom: 8,
+  },
+  bulletText: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.textSecondary,
+    lineHeight: 18,
   },
   redDot: {
     width: 6,
@@ -373,42 +506,22 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#16A34A',
+    backgroundColor: colors.primary,
     marginTop: 6,
   },
-  bulletText: {
-    fontSize: 13,
-    color: '#374151',
-    lineHeight: 18,
-    flex: 1,
-  },
-  actionsContainer: {
-    gap: 10,
-    marginTop: 8,
-  },
-  scanAnotherBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
+  actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-  },
-  scanAnotherText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  doneBtn: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.primary,
+    paddingVertical: 14,
     borderRadius: 14,
-    paddingVertical: 13,
-    alignItems: 'center',
+    marginTop: 10,
   },
-  doneText: {
-    color: colors.textPrimary,
+  actionBtnText: {
     fontSize: 14,
     fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

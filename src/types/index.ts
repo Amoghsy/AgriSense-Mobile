@@ -21,11 +21,22 @@ export interface DiseaseDetection {
   treatment: {
     organic: string[];
     chemical: string[];
+    cultural?: string[];
   };
   prevention: string[];
   imageUri: string;
   date: string;
   isDemo: boolean;
+  isUncertain?: boolean;
+  uncertaintyWarning?: string;
+  alternatives?: Array<{
+    crop: string;
+    disease: string;
+    confidence: number;
+    class_name?: string;
+  }>;
+  inferenceTimeMs?: number;
+  causes?: string[];
 }
 
 export interface Product {

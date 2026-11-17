@@ -3,16 +3,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DiseaseDetection } from '../types';
 import {
   initialDetectionHistory,
-  sampleDiseaseResults,
   fetchDiseaseHistory,
-  fetchSampleDiseaseResults,
 } from '../constants/mockData';
+import {
+  predictDiseaseFromBackend,
+  checkBackendStatus,
+  BackendStatus,
+} from '../services/diseaseApi';
 
 interface DetectionContextType {
   history: DiseaseDetection[];
   latestResult: DiseaseDetection | null;
   isAnalyzing: boolean;
-  analyzeImage: (imageUri: string) => Promise<DiseaseDetection>;
+  backendStatus: BackendStatus | null;
+  isBackendOnline: boolean;
+  checkStatus: () => Promise<BackendStatus>;
+  analyzeImage: (imageUri: string, base64Data?: string | null) => Promise<DiseaseDetection>;
   clearHistory: () => Promise<void>;
   setLatestResult: (result: DiseaseDetection | null) => void;
 }
@@ -24,10 +30,32 @@ export const DetectionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [history, setHistory] = useState<DiseaseDetection[]>(initialDetectionHistory);
   const [latestResult, setLatestResult] = useState<DiseaseDetection | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [backendStatus, setBackendStatus] = useState<BackendStatus | null>(null);
+  const [isBackendOnline, setIsBackendOnline] = useState<boolean>(false);
 
   useEffect(() => {
     loadHistory();
+    refreshStatus();
   }, []);
+
+  const refreshStatus = async (): Promise<BackendStatus> => {
+    try {
+      const status = await checkBackendStatus();
+      setBackendStatus(status);
+      setIsBackendOnline(status.online);
+      return status;
+    } catch (e) {
+      setIsBackendOnline(false);
+      return {
+        online: false,
+        modelLoaded: false,
+        modelName: '',
+        device: '',
+        supportedClasses: 0,
+        url: '',
+      };
+    }
+  };
 
   const loadHistory = async () => {
     try {
@@ -43,43 +71,35 @@ export const DetectionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
-  const analyzeImage = async (imageUri: string): Promise<DiseaseDetection> => {
+  const analyzeImage = async (
+    imageUri: string,
+    base64Data?: string | null
+  ): Promise<DiseaseDetection> => {
     setIsAnalyzing(true);
 
-    // Simulate realistic AI model inference time (1.6s)
-    await new Promise((resolve) => setTimeout(resolve, 1600));
-
-    // Cycle through rich sample diseases for realistic variation
-    const pool = [
-      sampleDiseaseResults.earlyBlight,
-      sampleDiseaseResults.powderyMildew,
-      sampleDiseaseResults.healthy,
-    ];
-    const picked = pool[Math.floor(Math.random() * pool.length)];
-
-    const newDetection: DiseaseDetection = {
-      ...picked,
-      id: `diag_${Date.now()}`,
-      imageUri: imageUri || picked.imageUri,
-      date: new Date().toLocaleString('en-US', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      }),
-      isDemo: true,
-    };
-
-    const updated = [newDetection, ...history];
-    setHistory(updated);
-    setLatestResult(newDetection);
-    setIsAnalyzing(false);
-
     try {
-      await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
-    } catch (e) {
-      console.warn('Failed to save detection history', e);
-    }
+      // 1. Attempt live classification using FastAPI MobileNetV2 backend
+      const liveResult = await predictDiseaseFromBackend(imageUri, base64Data);
+      setIsBackendOnline(true);
 
-    return newDetection;
+      const updated = [liveResult, ...history];
+      setHistory(updated);
+      setLatestResult(liveResult);
+      setIsAnalyzing(false);
+
+      try {
+        await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Failed to save detection history', e);
+      }
+
+      return liveResult;
+    } catch (backendError: any) {
+      setIsBackendOnline(false);
+      setIsAnalyzing(false);
+      console.warn('Backend prediction failed:', backendError.message);
+      throw new Error(backendError.message || 'Could not connect to FastAPI AI backend.');
+    }
   };
 
   const clearHistory = async () => {
@@ -93,6 +113,9 @@ export const DetectionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         history,
         latestResult,
         isAnalyzing,
+        backendStatus,
+        isBackendOnline,
+        checkStatus: refreshStatus,
         analyzeImage,
         clearHistory,
         setLatestResult,
